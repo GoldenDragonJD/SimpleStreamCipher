@@ -7,15 +7,19 @@ class SimpleStreamCipher {
 public:
     SimpleStreamCipher(const QByteArray& key,
                        const QByteArray& nonce)
-        : m_key(key), m_nonce(nonce), m_counter(0) {}
+        : m_key(key),
+        m_nonce(nonce),
+        m_counter(0),
+        m_streamOffset(0)
+    {}
 
     void process(QByteArray& data) {
-        int offset = 0;
-        while (offset < data.size()) {
-            QByteArray stream = generateKeystreamBlock();
-            for (int i = 0; i < stream.size() && offset < data.size(); ++i) {
-                data[offset++] ^= stream[i];
+        for (int i = 0; i < data.size(); ++i) {
+            if (m_streamOffset == m_stream.size()) {
+                m_stream = generateKeystreamBlock();
+                m_streamOffset = 0;
             }
+            data[i] ^= m_stream[m_streamOffset++];
         }
     }
 
@@ -23,6 +27,9 @@ private:
     QByteArray m_key;
     QByteArray m_nonce;
     uint64_t   m_counter;
+
+    QByteArray m_stream;
+    int        m_streamOffset;
 
     QByteArray generateKeystreamBlock() {
         QByteArray input;
@@ -33,7 +40,8 @@ private:
         m_counter++;
 
         return QCryptographicHash::hash(
-            input, QCryptographicHash::Sha256
+            input,
+            QCryptographicHash::Sha256
             );
     }
 };
